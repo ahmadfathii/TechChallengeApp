@@ -1,0 +1,14 @@
+  jobs: 
+    - job: Build
+      pool:
+        vmImage: ubuntu-latest 
+      displayName: Build image
+      steps:
+      - task: Docker@2
+        displayName: Build-push image to ACR
+        inputs:
+          command: buildAndPush
+          repository: ${{ parameters.repository }}
+          dockerfile: ${{ parameters.dockerfile }}
+          containerRegistry: ${{ parameters.containerRegistry }}
+          tags: '$(Build.BuildId)'

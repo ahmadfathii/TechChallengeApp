@@ -1,0 +1,29 @@
+  jobs:
+  - job: '${{ parameters.job_name }}'
+    pool:
+      vmImage: ubuntu-latest    
+    steps:  
+    - task: TerraformInstaller@0
+      displayName: Install TF $(tf_version)
+      inputs:
+        terraformVersion: $(tf_version)
+
+    - task: TerraformTaskV2@2
+      displayName: terraform init
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '${{ parameters.tfworkingDirectory }}'
+        backendServiceArm: '${{ parameters.backendServiceArm }}'
+        backendAzureRmResourceGroupName: '${{ parameters.backendAzureRmResourceGroupName }}'
+        backendAzureRmStorageAccountName: '${{ parameters.backendAzureRmStorageAccountName }}'
+        backendAzureRmContainerName: '${{ parameters.backendAzureRmContainerName }}'
+        backendAzureRmKey: '${{ parameters.backendAzureRmKey }}'     
+
+    - task: TerraformTaskV2@2
+      displayName: terraform destroy
+      inputs:
+        provider: 'azurerm'
+        command: 'destroy'
+        workingDirectory: '${{ parameters.tfworkingDirectory }}'
+        environmentServiceNameAzureRM: '${{ parameters.backendServiceArm }}'

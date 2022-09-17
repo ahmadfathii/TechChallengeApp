@@ -1,0 +1,130 @@
+jobs:
+  - job: terraform_init_plan
+    pool:
+      vmImage: ubuntu-latest   
+    displayName: Create TFplan
+    steps:
+    - task: DownloadSecureFile@1
+      displayName: init tfvars file
+      name: tfvarsfile
+      inputs:
+        secureFile: 'terraform.tfvars' 
+    - task: TerraformInstaller@0
+      displayName: Install TF $(tf_version)
+      inputs:
+        terraformVersion: $(tf_version)
+    - task: AzureCLI@2
+      inputs:
+        displayName: kubelogin install
+        azureSubscription: '${{ parameters.backendServiceArm }}'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          wget https://github.com/Azure/kubelogin/releases/download/v0.0.20/kubelogin-linux-amd64.zip
+          unzip kubelogin-linux-amd64.zip
+          sudo mv bin/linux_amd64/kubelogin /usr/bin
+    - task: TerraformTaskV2@2
+      displayName: terraform init
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '${{ parameters.tfworkingDirectory }}'
+        backendServiceArm: '${{ parameters.backendServiceArm }}'
+        backendAzureRmResourceGroupName: '${{ parameters.backendAzureRmResourceGroupName }}'
+        backendAzureRmStorageAccountName: '${{ parameters.backendAzureRmStorageAccountName }}'
+        backendAzureRmContainerName: '${{ parameters.backendAzureRmContainerName }}'
+        backendAzureRmKey: '${{ parameters.backendAzureRmKey }}'     
+    - task: TerraformTaskV2@2
+      displayName: terraform validate
+      inputs:
+        provider: 'azurerm'
+        command: 'validate'
+        workingDirectory: '${{ parameters.tfworkingDirectory }}'
+        environmentServiceNameAzureRM: '${{ parameters.backendServiceArm }}'
+    - task: TerraformTaskV2@2
+      displayName: terraform plan
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        commandOptions: '-var build_id=$(Build.BuildId) -input=false -var-file=$(tfvarsfile.secureFilePath) -out tfplan'
+        workingDirectory: '${{ parameters.tfworkingDirectory }}'
+        environmentServiceNameAzureRM: '${{ parameters.backendServiceArm }}'    
+    - script: |
+          cd '${{ parameters.tfworkingDirectory }}'
+          # Format tfplan.json file
+          terraform show -json tfplan | jq '.' > tfplan.json
+          # show only the changes
+          cat tfplan.json | jq '[.resource_changes[] | {type: .type, name: .change.after.name, actions: .change.actions[]}]' 
+      displayName: tfplan review    
+    - task: PublishBuildArtifacts@1
+      displayName: Upload tfplan to pipeline
+      inputs:
+        PathtoPublish: '${{ parameters.tfworkingDirectory }}'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'  
+  - job: waitForValidation
+    displayName: Manual approval
+    dependsOn: terraform_init_plan
+    pool: server    
+    timeoutInMinutes: 4320 # job times out in 3 days
+    steps:   
+    - task: ManualValidation@0
+      inputs:
+        notifyUsers: 'ahmed.fathy.com@hotmail.com'
+        instructions: |
+          you should validate the tf Plan file for build 
+          $(Build.BuildId)
+   
+  - job: terraform_apply
+    displayName: terraform apply
+    dependsOn: waitForValidation 
+    pool:
+      vmImage: ubuntu-latest
+    steps:  
+    - task: DownloadBuildArtifacts@0
+      displayName: Download tfplan
+      inputs:
+        buildType: 'current'
+        downloadType: 'specific'
+        itemPattern: 'drop/tfplan'
+        downloadPath: '$(System.ArtifactsDirectory)'
+    - task: CopyFiles@2
+      displayName: Copy tfplan
+      inputs:
+        SourceFolder: '$(System.ArtifactsDirectory)/drop'
+        Contents: 'tfplan'
+        TargetFolder: '${{ parameters.tfworkingDirectory }}'
+    - task: TerraformInstaller@0
+      displayName: Install TF $(tf_version)
+      inputs:
+        terraformVersion: $(tf_version)        
+    - task: AzureCLI@2
+      inputs:
+        displayName: $ install kubelogin
+        azureSubscription: '${{ parameters.backendServiceArm }}'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          wget https://github.com/Azure/kubelogin/releases/download/v0.0.20/kubelogin-linux-amd64.zip
+          unzip kubelogin-linux-amd64.zip
+          sudo mv bin/linux_amd64/kubelogin /usr/bin
+    - task: TerraformTaskV2@2
+      displayName: terraform init
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '${{ parameters.tfworkingDirectory }}'
+        backendServiceArm: '${{ parameters.backendServiceArm }}'
+        backendAzureRmResourceGroupName: '${{ parameters.backendAzureRmResourceGroupName }}'
+        backendAzureRmStorageAccountName: '${{ parameters.backendAzureRmStorageAccountName }}'
+        backendAzureRmContainerName: '${{ parameters.backendAzureRmContainerName }}'
+        backendAzureRmKey: '${{ parameters.backendAzureRmKey }}'
+    - task: TerraformTaskV2@2
+      condition: and(succeeded(), ne(variables['Action'], 'Destroy'))
+      displayName: terraform apply
+      inputs:
+        provider: 'azurerm'
+        command: 'apply'
+        commandOptions: 'tfplan'
+        workingDirectory: '${{ parameters.tfworkingDirectory }}'
+        environmentServiceNameAzureRM: '${{ parameters.backendServiceArm }}'
