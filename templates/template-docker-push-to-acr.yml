@@ -4,6 +4,20 @@
         vmImage: ubuntu-latest 
       displayName: Build image
       steps:
+      - task: replacetokens@5
+        displayName: replace token on Dockerfile
+        inputs:
+          targetFiles: '**/Dockerfile'
+          encoding: 'auto'
+          tokenPattern: 'doublebraces'
+          writeBOM: true
+          actionOnMissing: 'warn'
+          keepToken: false
+          actionOnNoFiles: 'continue'
+          enableTransforms: false
+          enableRecursion: false
+          useLegacyPattern: false
+          enableTelemetry: true
       - task: Docker@2
         displayName: Build-push image to ACR
         inputs:
