@@ -29,7 +29,7 @@ variables:
   prodEnvironment: prod
   infrastatus: update
   repository: 'techchallengeapp'
-  dockerfile: '$(Build.SourcesDirectory)/TechChallengeApp/Dockerfile'
+  dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
   Action: '${{ parameters.Action }}'
   
 stages:
