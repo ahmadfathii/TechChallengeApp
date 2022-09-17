@@ -58,7 +58,7 @@ func LoadConfig() (*Config, error) {
 	v.SetDefault("DbHost", "localhost")
 	v.SetDefault("DbType", "postgres")
 
-	v.SetDefault("ListenHost", "127.0.0.1")
+	v.SetDefault("ListenHost", "0.0.0.0")
 	v.SetDefault("ListenPort", "3000")
 
 	err := v.ReadInConfig() // Find and read the config file
