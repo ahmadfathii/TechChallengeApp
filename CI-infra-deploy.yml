@@ -1,0 +1,127 @@
+name: $(date:yyyyMMdd)$(rev:.r)
+
+trigger:
+- ci-cd
+parameters:
+  - name: Action
+    displayName: Action
+    type: string
+    default: 'Apply'
+    values:
+    - Init
+    - Apply
+    - Destroy
+
+variables:
+  tf_version: 1.2.9
+  backendServiceArm: 'serviceconnection-arm'
+  containerRegistry: 'serviceconnection-acr'
+  backendAzureRmResourceGroupName: 'resourcegroup-servian-tfstate'
+  backendAzureRmStorageAccountName: 'serviantfstatestgaccount'
+  backendAzureRmContainerName: 'tfstatecontainer'
+  backendAzureRmKey: 'base-tf.state'
+  backendAzureRmKeyAKS: 'aks-tf.state'
+  location: 'westeurope'
+  tag:     '$(Build.BuildId)'
+  tfBackendEnvironment: tf_backend
+  devEnvironment: dev
+  testEnvironment: test
+  prodEnvironment: prod
+  infrastatus: update
+  repository: 'techchallengeapp'
+  dockerfile: '$(Build.SourcesDirectory)/TechChallengeApp/Dockerfile'
+  Action: '${{ parameters.Action }}'
+  
+stages:
+  - stage: create_tf_backend_resources
+    condition: eq(variables['Action'], 'Init')
+    jobs:
+      - template: templates/template-azure-backend-create.yml
+        parameters:
+          environmentDisplayName: Create TF Backend
+          environment: ${{ variables.tfBackendEnvironment }}
+          backendServiceArm: ${{ variables.backendServiceArm }}
+          location: ${{ variables.location }}
+          backendAzureRmResourceGroupName: ${{ variables.backendAzureRmResourceGroupName }}
+          backendAzureRmStorageAccountName: ${{ variables.backendAzureRmStorageAccountName }}
+          backendAzureRmContainerName: ${{ variables.backendAzureRmContainerName }}
+          backendAzureRmKey: ${{ variables.backendAzureRmKey }}
+          environmentServiceNameAzureRM: ${{ variables.backendServiceArm }}
+  
+  - stage: deploy_tf_base_infra
+    condition: eq('${{ parameters.Action }}', 'Apply')
+    jobs:
+      - template: templates/template-terraform-deploy.yml
+        parameters:
+          environment: ${{ variables.tfBackendEnvironment }}
+          environmentDisplayName: Create TF Backend
+          backendServiceArm: ${{ variables.backendServiceArm }}
+          backendAzureRmResourceGroupName: ${{ variables.backendAzureRmResourceGroupName }}
+          backendAzureRmStorageAccountName: ${{ variables.backendAzureRmStorageAccountName }}
+          backendAzureRmContainerName: ${{ variables.backendAzureRmContainerName }}
+          location: ${{ variables.location }}
+          backendAzureRmKey: ${{ variables.backendAzureRmKey }}
+          environmentServiceNameAzureRM: ${{ variables.backendServiceArm }}
+          tfworkingDirectory: '$(System.DefaultWorkingDirectory)/terraform/base'
+  
+ 
+
+
+  - stage: build_docker_image
+    dependsOn: deploy_tf_base_infra
+    condition: and(succeeded('deploy_tf_base_infra'),eq('${{ parameters.Action }}', 'Apply'))
+    jobs:
+      - template: templates/template-docker-push-to-acr.yml
+        parameters:
+          repository: ${{ variables.repository }}
+          dockerfile: ${{ variables.dockerfile }}
+          containerRegistry: ${{ variables.containerRegistry }}
+
+  - stage: deploy_app_to_k8s
+    dependsOn: build_docker_image
+    condition: and(succeeded('build_docker_image'),eq('${{ parameters.Action }}', 'Apply'))
+
+    jobs:
+      - template: templates/template-terraform-deploy.yml
+        parameters:
+          environment: ${{ variables.tfBackendEnvironment }}
+          environmentDisplayName: Create TF Backend
+          backendServiceArm: ${{ variables.backendServiceArm }}
+          backendAzureRmResourceGroupName: ${{ variables.backendAzureRmResourceGroupName }}
+          backendAzureRmStorageAccountName: ${{ variables.backendAzureRmStorageAccountName }}
+          backendAzureRmContainerName: ${{ variables.backendAzureRmContainerName }}
+          location: ${{ variables.location }}  
+          backendAzureRmKey: ${{ variables.backendAzureRmKeyAKS }}
+          environmentServiceNameAzureRM: ${{ variables.backendServiceArm }}
+          tfworkingDirectory: '$(System.DefaultWorkingDirectory)/terraform/k8s' 
+          
+  - stage: destroy_tf_resources
+    condition: eq('${{ parameters.Action }}', 'Destroy')
+    jobs:
+      - template: templates/template-terraform-destroy.yml
+        parameters:
+          environmentDisplayName: Destroy TF Backend
+          job_name: 'terraform_destroy_base'
+          location: ${{ variables.location }}
+          environmentServiceNameAzureRM: ${{ variables.backendServiceArm }}
+          environment: ${{ variables.tfBackendEnvironment }}
+          backendServiceArm: ${{ variables.backendServiceArm }}
+          backendAzureRmResourceGroupName: ${{ variables.backendAzureRmResourceGroupName }}
+          backendAzureRmStorageAccountName: ${{ variables.backendAzureRmStorageAccountName }}
+          backendAzureRmContainerName: ${{ variables.backendAzureRmContainerName }}
+          backendAzureRmKey: ${{ variables.backendAzureRmKey }}
+          tfworkingDirectory: '$(System.DefaultWorkingDirectory)/terraform/base'
+
+      - template: templates/template-terraform-destroy.yml
+        parameters:
+          environmentDisplayName: Destroy TF AKS Backend
+          job_name: 'terraform_destroy_k8s'
+          environment: ${{ variables.tfBackendEnvironment }}
+          location: ${{ variables.location }}
+          environmentServiceNameAzureRM: ${{ variables.backendServiceArm }}
+          backendServiceArm: ${{ variables.backendServiceArm }}
+          backendAzureRmResourceGroupName: ${{ variables.backendAzureRmResourceGroupName }}
+          backendAzureRmStorageAccountName: ${{ variables.backendAzureRmStorageAccountName }}
+          backendAzureRmContainerName: ${{ variables.backendAzureRmContainerName }}
+          backendAzureRmKey: ${{ variables.backendAzureRmKeyAKS }}
+          tfworkingDirectory: '$(System.DefaultWorkingDirectory)/terraform/k8s'
