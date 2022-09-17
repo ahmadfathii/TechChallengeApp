@@ -32,4 +32,5 @@ WORKDIR /TechChallengeApp
 COPY conf.toml ./conf.toml
 COPY --from=build /TechChallengeApp TechChallengeApp
 
-ENTRYPOINT [ "./TechChallengeApp" ]
+RUN echo "./TechChallengeApp updatedb; ./TechChallengeApp serve" > run.sh
+ENTRYPOINT [ "/bin/sh", "run.sh" ]
