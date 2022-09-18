@@ -4,5 +4,5 @@
 "DbPort" = "5432"
 "DbHost" = "localhost"
 "DbType" = "postgres"
-"ListenHost" = "localhost"
+"ListenHost" = "0.0.0.0"
 "ListenPort" = "3000"
