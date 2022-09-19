@@ -70,7 +70,7 @@ func LoadConfig() (*Config, error) {
 	conf.DbUser = strings.TrimSpace(v.GetString("DBUSER"))
 	conf.DbPassword = strings.TrimSpace(v.GetString("DBPASSWORD"))
 	conf.DbName = strings.TrimSpace(v.GetString("DBNAME"))
-	conf.DbHost = strings.TrimSpace(v.GetString("DbHost"))
+	conf.DbHost = strings.TrimSpace(v.GetString("DBHOST"))
 	conf.DbPort = strings.TrimSpace(v.GetString("DBPORT"))
 	conf.DbType = strings.TrimSpace(v.GetString("DBTYPE"))
 	conf.ListenHost = strings.TrimSpace(v.GetString("LISTENHOST"))
