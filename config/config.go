@@ -51,15 +51,15 @@ func LoadConfig() (*Config, error) {
 	v.SetEnvPrefix("VTT")
 	v.AutomaticEnv()
 
-	v.SetDefault("DbUser", "postgres")
-	v.SetDefault("DbPassword", "postgres")
-	v.SetDefault("DbName", "postgres")
-	v.SetDefault("DbPort", "postgres")
-	v.SetDefault("DbHost", "0.0.0.0")
-	v.SetDefault("DbType", "postgres")
+	v.SetDefault("DBUSER", "postgres")
+	v.SetDefault("DBPASSWORD", "postgres")
+	v.SetDefault("DBNAME", "postgres")
+	v.SetDefault("DBPORT", "postgres")
+	v.SetDefault("DBHOST", "0.0.0.0")
+	v.SetDefault("DBTYPE", "postgres")
 
-	v.SetDefault("ListenHost", "0.0.0.0")
-	v.SetDefault("ListenPort", "3000")
+	v.SetDefault("LISTENHOST", "0.0.0.0")
+	v.SetDefault("LISTENPORT", "3000")
 
 	err := v.ReadInConfig() // Find and read the config file
 
@@ -67,14 +67,14 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
-	conf.DbUser = strings.TrimSpace(v.GetString("DbUser"))
-	conf.DbPassword = strings.TrimSpace(v.GetString("DbPassword"))
-	conf.DbName = strings.TrimSpace(v.GetString("DbName"))
+	conf.DbUser = strings.TrimSpace(v.GetString("DBUSER"))
+	conf.DbPassword = strings.TrimSpace(v.GetString("DBPASSWORD"))
+	conf.DbName = strings.TrimSpace(v.GetString("DBNAME"))
 	conf.DbHost = strings.TrimSpace(v.GetString("DbHost"))
-	conf.DbPort = strings.TrimSpace(v.GetString("DbPort"))
-	conf.DbType = strings.TrimSpace(v.GetString("DbType"))
-	conf.ListenHost = strings.TrimSpace(v.GetString("ListenHost"))
-	conf.ListenPort = strings.TrimSpace(v.GetString("ListenPort"))
+	conf.DbPort = strings.TrimSpace(v.GetString("DBPORT"))
+	conf.DbType = strings.TrimSpace(v.GetString("DBTYPE"))
+	conf.ListenHost = strings.TrimSpace(v.GetString("LISTENHOST"))
+	conf.ListenPort = strings.TrimSpace(v.GetString("LISTENPORT"))
 
 	return conf, nil
 }
