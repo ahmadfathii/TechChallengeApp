@@ -55,7 +55,7 @@ func LoadConfig() (*Config, error) {
 	v.SetDefault("DbPassword", "postgres")
 	v.SetDefault("DbName", "postgres")
 	v.SetDefault("DbPort", "postgres")
-	v.SetDefault("DbHost", "localhost")
+	v.SetDefault("DbHost", "0.0.0.0")
 	v.SetDefault("DbType", "postgres")
 
 	v.SetDefault("ListenHost", "0.0.0.0")
