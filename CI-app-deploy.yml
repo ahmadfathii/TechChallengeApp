@@ -1,0 +1,58 @@
+name: $(date:yyyyMMdd)$(rev:.r)
+
+trigger:
+- ci-cd
+parameters:
+  - name: Action
+    displayName: Action
+    type: string
+    default: 'Apply'
+    values:
+    - Apply
+
+variables:
+  tf_version: 1.2.9
+  backendServiceArm: 'serviceconnection-arm'
+  containerRegistry: 'serviceconnection-acr'
+  backendAzureRmResourceGroupName: 'resourcegroup-servian-tfstate'
+  backendAzureRmStorageAccountName: 'serviantfstatestgaccount'
+  backendAzureRmContainerName: 'tfstatecontainer'
+  backendAzureRmKey: 'base-tf.state'
+  backendAzureRmKeyAKS: 'aks-tf.state'
+  location: 'westeurope'
+  tag:     '$(Build.BuildId)'
+  tfBackendEnvironment: tf_backend
+  devEnvironment: dev
+  testEnvironment: test
+  prodEnvironment: prod
+  repository: 'techchallengeapp'
+  dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
+  Action: '${{ parameters.Action }}'
+  
+stages:
+
+  - stage: build_docker_image
+    jobs:
+      - template: templates/template-docker-push-to-acr.yml
+        parameters:
+          repository: ${{ variables.repository }}
+          dockerfile: ${{ variables.dockerfile }}
+          containerRegistry: ${{ variables.containerRegistry }}
+
+  - stage: deploy_app_to_k8s
+    dependsOn: build_docker_image
+    condition: and(succeeded('build_docker_image'),eq('${{ parameters.Action }}', 'Apply'))
+
+    jobs:
+      - template: templates/template-terraform-deploy.yml
+        parameters:
+          environment: ${{ variables.tfBackendEnvironment }}
+          environmentDisplayName: Create TF Backend
+          backendServiceArm: ${{ variables.backendServiceArm }}
+          backendAzureRmResourceGroupName: ${{ variables.backendAzureRmResourceGroupName }}
+          backendAzureRmStorageAccountName: ${{ variables.backendAzureRmStorageAccountName }}
+          backendAzureRmContainerName: ${{ variables.backendAzureRmContainerName }}
+          location: ${{ variables.location }}  
+          backendAzureRmKey: ${{ variables.backendAzureRmKeyAKS }}
+          environmentServiceNameAzureRM: ${{ variables.backendServiceArm }}
+          tfworkingDirectory: '$(System.DefaultWorkingDirectory)/terraform/k8s' 
