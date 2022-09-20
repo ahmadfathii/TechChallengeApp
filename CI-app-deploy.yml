@@ -1,7 +1,13 @@
 name: $(date:yyyyMMdd)$(rev:.r)
 
 trigger:
-- ci-cd
+  branches:
+    include:
+    - master
+    - ci-cd
+  paths:
+    exclude:
+    - */terraform/base/*
 parameters:
   - name: Action
     displayName: Action
@@ -44,7 +50,7 @@ stages:
     condition: and(succeeded('build_docker_image'),eq('${{ parameters.Action }}', 'Apply'))
 
     jobs:
-      - template: templates/template-terraform-deploy.yml
+      - template: templates/template-app-deploy.yml
         parameters:
           environment: ${{ variables.tfBackendEnvironment }}
           environmentDisplayName: Create TF Backend
