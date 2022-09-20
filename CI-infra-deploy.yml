@@ -1,7 +1,6 @@
 name: $(date:yyyyMMdd)$(rev:.r)
 
-trigger:
-- ci-cd
+trigger: none # Disable CI triggers.
 parameters:
   - name: Action
     displayName: Action
