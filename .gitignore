@@ -22,3 +22,9 @@ dist/
 
 # Output Binary
 TechChallengeApp
+/terraform/*/.terraform/
+/terraform/*/terraform.tfstat*
+/terraform/*/.terraform.lock.hcl
+/terraform/.terraform.lock.hcl
+/terraform/terraform.tfstat*
+/terraform/.terraform/
